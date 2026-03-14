@@ -1,0 +1,42 @@
+{
+  "name": "@elilands/npm-weight",
+  "version": "1.0.1",
+  "description": "The elite CLI to calculate the real cost, weight, and health of your npm dependencies.",
+  "main": "./dist/index.js",
+  "type": "module",
+  "bin": {
+    "npm-weight": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsup"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "keywords": [
+    "npm",
+    "bundlephobia",
+    "size",
+    "weight",
+    "dependencies",
+    "cli",
+    "audit"
+  ],
+  "author": "elilands",
+  "license": "MIT",
+  "dependencies": {
+    "@clack/prompts": "^1.1.0",
+    "cac": "^7.0.0",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "tsup": "^8.5.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
