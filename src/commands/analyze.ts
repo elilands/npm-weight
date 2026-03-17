@@ -92,7 +92,7 @@ export async function executeAnalyze(options: { json?: boolean; md?: boolean }) 
 
     p.note(summaryMsg, "💡 Actionable Insights");
 
-    // EL AUTO-FIX
+    // EL AUTO-FIX CON BLINDAJE ANTI-CONFLICTOS
     if (outdatedPkgs.length > 0) {
       const shouldUpdate = await p.confirm({
         message: `Do you want to auto-update these ${outdatedPkgs.length} packages to their latest versions now?`,
@@ -105,13 +105,46 @@ export async function executeAnalyze(options: { json?: boolean; md?: boolean }) 
       }
 
       if (shouldUpdate) {
-        const s = p.spinner();
+        let s = p.spinner();
         s.start(`Running ${manifest.packageManager} install... This might take a few seconds.`);
         
         const pkgNames = outdatedPkgs.map(d => `${d.name}@latest`);
-        await updatePackages(pkgNames, manifest.packageManager);
         
-        s.stop(picocolors.green("✔ Packages updated successfully! Run the analysis again to see the new scores."));
+        try {
+          // Intento 1: Actualización normal estricta
+          await updatePackages(pkgNames, manifest.packageManager);
+          s.stop(picocolors.green("✔ Packages updated successfully! Run the analysis again to see the new scores."));
+          
+        } catch (updateError: any) {
+          s.stop(picocolors.red("✖ Update blocked by package manager."));
+          
+          // 🛡️ DETECCIÓN DE ERESOLVE (Dependency Hell)
+          if (manifest.packageManager === "npm" && updateError.stderr?.includes("ERESOLVE")) {
+            p.log.warn(picocolors.yellow("NPM blocked the update due to conflicting peer dependencies (ERESOLVE)."));
+            p.log.message(picocolors.dim("Example: One of your packages requires an older version of a library we are trying to update."));
+            
+            const force = await p.confirm({
+              message: `Do you want to bypass strict checks and force the update using '--legacy-peer-deps'?`,
+              initialValue: false
+            });
+
+            if (p.isCancel(force) || !force) {
+              p.log.info(picocolors.dim("Update aborted to protect your project's integrity. You may need to update packages manually."));
+            } else {
+              // Intento 2: Forzando la actualización
+              s = p.spinner();
+              s.start("Retrying update with --legacy-peer-deps...");
+              try {
+                await updatePackages(pkgNames, manifest.packageManager, true);
+                s.stop(picocolors.green("✔ Packages force-updated successfully using legacy peer deps!"));
+              } catch (forceError) {
+                s.stop(picocolors.red("✖ Force update failed. Manual intervention required."));
+              }
+            }
+          } else {
+             p.log.error(picocolors.red("An unexpected error occurred during the update process."));
+          }
+        }
       }
     }
 

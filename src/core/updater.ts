@@ -5,13 +5,12 @@ import { promisify } from "util";
 
 const execAsync = promisify(exec);
 
-export async function updatePackages(packages: string[], packageManager: string): Promise<void> {
+export async function updatePackages(packages: string[], packageManager: string, forceLegacy = false): Promise<void> {
   if (packages.length === 0) return;
 
   const pkgList = packages.join(" ");
   let command = "";
 
-  // Construimos el comando exacto según el gestor que detectó nuestro escáner
   if (packageManager === "yarn") {
     command = `yarn add ${pkgList}`;
   } else if (packageManager === "pnpm") {
@@ -19,9 +18,10 @@ export async function updatePackages(packages: string[], packageManager: string)
   } else if (packageManager === "bun") {
     command = `bun add ${pkgList}`;
   } else {
-    command = `npm install ${pkgList}`;
+    // Si estamos en NPM y pedimos forzar, inyectamos la bandera
+    command = forceLegacy ? `npm install ${pkgList} --legacy-peer-deps` : `npm install ${pkgList}`;
   }
 
-  // Ejecutamos el comando de forma nativa en el sistema operativo
+  // Ejecutamos el comando de forma nativa
   await execAsync(command);
 }
